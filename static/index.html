@@ -79,7 +79,7 @@
   .detail-panel .explanation { margin-top: 8px; color: var(--text-muted); }
 
   #onboardForm, #offboardForm {
-    background: var(--card-bg);
+    background: #faf9f8;
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 16px;
@@ -113,10 +113,42 @@
   button.secondary { background: white; color: var(--accent); border: 1px solid var(--accent); }
   button.secondary:hover { background: #f3f9fd; }
 
-  .actions-row { display: flex; gap: 8px; margin-bottom: 12px; }
-  .result-msg { margin-top: 10px; font-size: 14px; padding: 10px; border-radius: 4px; }
+  .actions-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .result-msg { margin-top: 10px; font-size: 14px; padding: 10px 12px; border-radius: 4px; line-height: 1.5; }
   .result-msg.success { background: var(--good-bg); color: var(--good); }
   .result-msg.error { background: var(--bad-bg); color: var(--bad); }
+
+  /* Collapsible cards */
+  details.card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 12px;
+  }
+  details.card > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+  }
+  details.card > summary::-webkit-details-marker { display: none; }
+  details.card > summary::before {
+    content: "\25B8";
+    font-size: 12px;
+    color: var(--text-muted);
+    transition: transform 0.15s ease;
+  }
+  details.card[open] > summary::before { transform: rotate(90deg); }
+  details.card > summary:hover { background: #faf9f8; border-radius: 6px; }
+  details.card > summary .hint { font-weight: 400; font-size: 12px; color: var(--text-muted); }
+  details.card > .card-body { padding: 0 16px 16px 16px; }
+
+  .section-caption { font-size: 12px; color: var(--text-muted); margin: -6px 0 12px 0; }
 </style>
 </head>
 <body>
@@ -138,7 +170,10 @@
 </section>
 
 <section>
-  <h2>Deploy New Device</h2>
+  <h2>Device Actions</h2>
+  <details class="card">
+    <summary>Deploy New Device <span class="hint">assign a serial + hostname before imaging/enrollment</span></summary>
+    <div class="card-body">
   <form id="deployForm">
     <div>
       <label>Serial Number</label>
@@ -171,10 +206,15 @@
     </div>
   </form>
   <div id="deployResult"></div>
+    </div>
+  </details>
 </section>
 
 <section>
-  <h2>Submit a Request</h2>
+  <h2>Identity Lifecycle</h2>
+  <details class="card">
+    <summary>Submit a Request <span class="hint">joiner / leaver intake &mdash; writes to the SharePoint request lists</span></summary>
+    <div class="card-body">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
     <form id="onboardForm">
       <h3 style="font-size:14px;margin:0 0 8px 0;">New Hire (Joiner)</h3>
@@ -210,14 +250,14 @@
     </form>
   </div>
   <div id="submitResult"></div>
-</section>
+    </div>
+  </details>
 
-<section>
-  <h2>Process Pending Requests</h2>
   <div class="actions-row">
     <button class="secondary" id="processOnboarding">Process Onboarding Requests</button>
     <button class="secondary" id="processOffboarding">Process Offboarding Requests</button>
   </div>
+  <p class="section-caption">Reads Pending items from the SharePoint lists and runs provisioning. This manual trigger simulates the scheduled automation job &mdash; in production it polls on a schedule.</p>
   <div id="processResult"></div>
 </section>
 
@@ -346,8 +386,12 @@ document.getElementById("onboardForm").addEventListener("submit", async (e) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  let msg = result.message;
+  if (result.success) {
+    msg += " The request is now <strong>Pending</strong> in SharePoint &mdash; click <strong>Process Onboarding Requests</strong> below to run provisioning now. (In production, a scheduled job picks this up automatically.)";
+  }
   document.getElementById("submitResult").innerHTML =
-    `<div class="result-msg ${result.success ? 'success' : 'error'}">${result.message}</div>`;
+    `<div class="result-msg ${result.success ? 'success' : 'error'}">${msg}</div>`;
   if (result.success) { document.getElementById("onboardForm").reset(); loadAudit(); }
 });
 
@@ -364,8 +408,12 @@ document.getElementById("offboardForm").addEventListener("submit", async (e) => 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  let msg = result.message;
+  if (result.success) {
+    msg += " The request is now <strong>Pending</strong> in SharePoint &mdash; click <strong>Process Offboarding Requests</strong> below to run it now. (In production, a scheduled job picks this up automatically.)";
+  }
   document.getElementById("submitResult").innerHTML =
-    `<div class="result-msg ${result.success ? 'success' : 'error'}">${result.message}</div>`;
+    `<div class="result-msg ${result.success ? 'success' : 'error'}">${msg}</div>`;
   if (result.success) { document.getElementById("offboardForm").reset(); loadAudit(); }
 });
 
