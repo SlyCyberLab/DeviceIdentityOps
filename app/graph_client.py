@@ -252,3 +252,27 @@ def send_mail(to_address: str, subject: str, body: str) -> None:
         },
         "saveToSentItems": "true",
     })
+
+
+# ---------- Request submission (the "front door") ----------
+# These create new items in the SharePoint lists - the reverse direction
+# of get_pending_*_requests(), which reads them. Together they mean
+# DeviceIdentityOps is a self-contained front door: submit a request here,
+# it's a real SharePoint list item, Process Requests reads it back exactly
+# the same way it would read one submitted through a Power Apps form or
+# any other tool - SharePoint stays the actual system of record either way.
+
+def create_onboarding_request(fields: dict) -> dict:
+    """POST a new Pending item to the New Hire Requests list."""
+    site_id = os.getenv("SHAREPOINT_SITE_ID")
+    list_id = os.getenv("ONBOARDING_LIST_ID")
+    body = {"fields": {**fields, "Status": "Pending"}}
+    return _post(f"/sites/{site_id}/lists/{list_id}/items", body)
+
+
+def create_offboarding_request(fields: dict) -> dict:
+    """POST a new Pending item to the Offboarding Requests list."""
+    site_id = os.getenv("SHAREPOINT_SITE_ID")
+    list_id = os.getenv("OFFBOARDING_LIST_ID")
+    body = {"fields": {**fields, "Status": "Pending"}}
+    return _post(f"/sites/{site_id}/lists/{list_id}/items", body)

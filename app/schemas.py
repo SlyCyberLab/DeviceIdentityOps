@@ -57,3 +57,26 @@ class AuditLogOut(BaseModel):
     action_type: str         # "DEVICE_DEPLOYMENT" | "ONBOARDING" | "OFFBOARDING"
     target: str
     result: str               # "SUCCESS" | "FAILED"
+
+
+# ---------- Request submission (the front door forms) ----------
+
+class OnboardingRequestSubmit(BaseModel):
+    first_name: str
+    last_name: str
+    department: str
+    manager_email: str
+    start_date: str   # YYYY-MM-DD from a <input type="date">
+    license: str = "Business Premium"
+
+
+class OffboardingRequestSubmit(BaseModel):
+    upn: str
+    display_name: str
+    manager_email: str
+    last_working_day: str  # YYYY-MM-DD
+
+
+class SubmitResult(BaseModel):
+    success: bool
+    message: str

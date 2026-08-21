@@ -23,6 +23,9 @@ from app.schemas import (
     DeviceDeployResult,
     ProcessRequestsResult,
     AuditLogOut,
+    OnboardingRequestSubmit,
+    OffboardingRequestSubmit,
+    SubmitResult,
 )
 
 # Safety default: real device/identity actions stay simulated until this is
@@ -230,3 +233,52 @@ def get_audit_log(db: Session) -> list[AuditLogOut]:
         )
         for e in entries
     ]
+
+
+def submit_onboarding_request(db: Session, request: OnboardingRequestSubmit) -> SubmitResult:
+    """
+    Creates a real Pending item in the New Hire Requests SharePoint list.
+    This is the front door - a manager (or, for the demo, you) fills out
+    this form instead of a Power Apps form; either way the item lands in
+    the same SharePoint list, which is what Process Requests actually reads.
+    """
+    if not graph_client.is_configured():
+        return SubmitResult(
+            success=False,
+            message="Microsoft Graph not configured yet - set TENANT_ID/CLIENT_ID/CLIENT_SECRET in .env (Phase 8).",
+        )
+    try:
+        graph_client.create_onboarding_request({
+            "FirstName": request.first_name,
+            "LastName": request.last_name,
+            "Department": request.department,
+            "ManagerEmail": request.manager_email,
+            "StartDate": f"{request.start_date}T00:00:00Z",
+            "License": request.license,
+        })
+        _write_audit(db, "ONBOARDING_REQUEST_SUBMITTED", f"{request.first_name} {request.last_name}", "SUCCESS")
+        return SubmitResult(success=True, message=f"Request submitted for {request.first_name} {request.last_name}.")
+    except Exception as exc:
+        _write_audit(db, "ONBOARDING_REQUEST_SUBMITTED", f"{request.first_name} {request.last_name}", "FAILED")
+        return SubmitResult(success=False, message=f"Failed to submit request: {exc}")
+
+
+def submit_offboarding_request(db: Session, request: OffboardingRequestSubmit) -> SubmitResult:
+    """Creates a real Pending item in the Offboarding Requests SharePoint list."""
+    if not graph_client.is_configured():
+        return SubmitResult(
+            success=False,
+            message="Microsoft Graph not configured yet - set TENANT_ID/CLIENT_ID/CLIENT_SECRET in .env (Phase 8).",
+        )
+    try:
+        graph_client.create_offboarding_request({
+            "UPN": request.upn,
+            "DisplayName": request.display_name,
+            "ManagerEmail": request.manager_email,
+            "LastWorkingDay": f"{request.last_working_day}T00:00:00Z",
+        })
+        _write_audit(db, "OFFBOARDING_REQUEST_SUBMITTED", request.display_name, "SUCCESS")
+        return SubmitResult(success=True, message=f"Offboarding request submitted for {request.display_name}.")
+    except Exception as exc:
+        _write_audit(db, "OFFBOARDING_REQUEST_SUBMITTED", request.display_name, "FAILED")
+        return SubmitResult(success=False, message=f"Failed to submit request: {exc}")

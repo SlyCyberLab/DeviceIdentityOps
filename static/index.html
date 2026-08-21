@@ -78,6 +78,19 @@
   .detail-panel.open { display: block; }
   .detail-panel .explanation { margin-top: 8px; color: var(--text-muted); }
 
+  #onboardForm, #offboardForm {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    display: block;
+  }
+  #onboardForm label, #offboardForm label {
+    display: block; font-size: 12px; color: var(--text-muted); margin: 8px 0 4px 0;
+  }
+  #onboardForm input, #onboardForm select, #offboardForm input {
+    width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px;
+  }
   form {
     background: var(--card-bg);
     border: 1px solid var(--border);
@@ -161,7 +174,46 @@
 </section>
 
 <section>
-  <h2>Onboarding / Offboarding</h2>
+  <h2>Submit a Request</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <form id="onboardForm">
+      <h3 style="font-size:14px;margin:0 0 8px 0;">New Hire (Joiner)</h3>
+      <label>First Name</label>
+      <input type="text" id="ob_firstName" required>
+      <label>Last Name</label>
+      <input type="text" id="ob_lastName" required>
+      <label>Department</label>
+      <select id="ob_department">
+        <option>Engineering</option>
+        <option>Sales</option>
+        <option>Operations</option>
+        <option>HR</option>
+        <option>Finance</option>
+      </select>
+      <label>Manager Email</label>
+      <input type="text" id="ob_managerEmail" required placeholder="manager@sleytech.com">
+      <label>Start Date</label>
+      <input type="date" id="ob_startDate" required>
+      <button type="submit" style="margin-top:10px;">Submit New Hire Request</button>
+    </form>
+    <form id="offboardForm">
+      <h3 style="font-size:14px;margin:0 0 8px 0;">Departing Employee (Leaver)</h3>
+      <label>UPN</label>
+      <input type="text" id="off_upn" required placeholder="name@sleytech.com">
+      <label>Display Name</label>
+      <input type="text" id="off_displayName" required>
+      <label>Manager Email</label>
+      <input type="text" id="off_managerEmail" required placeholder="manager@sleytech.com">
+      <label>Last Working Day</label>
+      <input type="date" id="off_lastDay" required>
+      <button type="submit" style="margin-top:10px;">Submit Offboarding Request</button>
+    </form>
+  </div>
+  <div id="submitResult"></div>
+</section>
+
+<section>
+  <h2>Process Pending Requests</h2>
   <div class="actions-row">
     <button class="secondary" id="processOnboarding">Process Onboarding Requests</button>
     <button class="secondary" id="processOffboarding">Process Offboarding Requests</button>
@@ -278,6 +330,43 @@ document.getElementById("deployForm").addEventListener("submit", async (e) => {
     loadDevices();
     loadAudit();
   }
+});
+
+document.getElementById("onboardForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = {
+    first_name: document.getElementById("ob_firstName").value,
+    last_name: document.getElementById("ob_lastName").value,
+    department: document.getElementById("ob_department").value,
+    manager_email: document.getElementById("ob_managerEmail").value,
+    start_date: document.getElementById("ob_startDate").value,
+  };
+  const result = await fetchJSON("/api/onboarding/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  document.getElementById("submitResult").innerHTML =
+    `<div class="result-msg ${result.success ? 'success' : 'error'}">${result.message}</div>`;
+  if (result.success) { document.getElementById("onboardForm").reset(); loadAudit(); }
+});
+
+document.getElementById("offboardForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = {
+    upn: document.getElementById("off_upn").value,
+    display_name: document.getElementById("off_displayName").value,
+    manager_email: document.getElementById("off_managerEmail").value,
+    last_working_day: document.getElementById("off_lastDay").value,
+  };
+  const result = await fetchJSON("/api/offboarding/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  document.getElementById("submitResult").innerHTML =
+    `<div class="result-msg ${result.success ? 'success' : 'error'}">${result.message}</div>`;
+  if (result.success) { document.getElementById("offboardForm").reset(); loadAudit(); }
 });
 
 document.getElementById("processOnboarding").addEventListener("click", async () => {

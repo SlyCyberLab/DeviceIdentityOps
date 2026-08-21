@@ -20,6 +20,9 @@ from app.schemas import (
     DeviceDeployResult,
     ProcessRequestsResult,
     AuditLogOut,
+    OnboardingRequestSubmit,
+    OffboardingRequestSubmit,
+    SubmitResult,
 )
 
 
@@ -71,6 +74,18 @@ def remove_device(device_id: int, db: Session = Depends(get_db)):
 
 
 # ---------- Onboarding / Offboarding ----------
+
+@app.post("/api/onboarding/submit", response_model=SubmitResult)
+def submit_onboarding(request: OnboardingRequestSubmit, db: Session = Depends(get_db)):
+    """Front door: creates a real Pending item in the SharePoint onboarding list."""
+    return logic.submit_onboarding_request(db, request)
+
+
+@app.post("/api/offboarding/submit", response_model=SubmitResult)
+def submit_offboarding(request: OffboardingRequestSubmit, db: Session = Depends(get_db)):
+    """Front door: creates a real Pending item in the SharePoint offboarding list."""
+    return logic.submit_offboarding_request(db, request)
+
 
 @app.post("/api/onboarding/process", response_model=ProcessRequestsResult)
 def process_onboarding(db: Session = Depends(get_db)):
