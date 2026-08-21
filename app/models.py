@@ -16,6 +16,7 @@ class Device(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     hostname = Column(String, nullable=False)
+    serial_number = Column(String, nullable=True)  # separate from hostname - matches the real MDT PUT pattern
     assigned_user = Column(String, nullable=True)
     os = Column(String, nullable=False)
     device_type = Column(String, nullable=True)  # Laptop, Desktop, etc. - distinct from OS

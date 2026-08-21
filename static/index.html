@@ -117,7 +117,7 @@
   <h2>Devices</h2>
   <table id="deviceTable">
     <thead>
-      <tr><th>Hostname</th><th>User</th><th>OS</th><th>Type</th><th>Compliance</th><th>Encryption</th><th>Management</th><th></th></tr>
+      <tr><th>Hostname</th><th>Serial</th><th>User</th><th>OS</th><th>Type</th><th>Compliance</th><th>Encryption</th><th>Management</th><th></th></tr>
     </thead>
     <tbody id="deviceRows"></tbody>
   </table>
@@ -130,6 +130,10 @@
     <div>
       <label>Serial Number</label>
       <input type="text" id="serialNumber" required>
+    </div>
+    <div>
+      <label>Hostname (to assign)</label>
+      <input type="text" id="hostname" required placeholder="ENG-LAP-030">
     </div>
     <div>
       <label>Assigned User</label>
@@ -205,6 +209,7 @@ async function loadDevices() {
     tr.className = "clickable";
     tr.innerHTML = `
       <td>${d.hostname}</td>
+      <td>${d.serial_number || "-"}</td>
       <td>${d.assigned_user || "-"}</td>
       <td>${d.os}</td>
       <td>${d.device_type || "-"}</td>
@@ -256,6 +261,7 @@ document.getElementById("deployForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const body = {
     serial_number: document.getElementById("serialNumber").value,
+    hostname: document.getElementById("hostname").value,
     assigned_user: document.getElementById("assignedUser").value,
     department: document.getElementById("department").value,
     device_type: document.getElementById("deviceType").value,

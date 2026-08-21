@@ -17,6 +17,7 @@ from typing import Optional
 class DeviceOut(BaseModel):
     id: int
     hostname: str
+    serial_number: Optional[str] = None
     assigned_user: Optional[str] = None
     os: str
     device_type: Optional[str] = None
@@ -28,6 +29,7 @@ class DeviceOut(BaseModel):
 
 class DeviceDeployRequest(BaseModel):
     serial_number: str
+    hostname: str          # the name IT is assigning during imaging - mirrors the MDT PUT pattern
     assigned_user: str
     department: str
     device_type: str

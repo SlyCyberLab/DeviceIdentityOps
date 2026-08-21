@@ -58,6 +58,7 @@ def get_devices(db: Session) -> list[DeviceOut]:
         DeviceOut(
             id=d.id,
             hostname=d.hostname,
+            serial_number=d.serial_number,
             assigned_user=d.assigned_user,
             os=d.os,
             device_type=d.device_type,
@@ -79,12 +80,12 @@ def deploy_device(db: Session, request: DeviceDeployRequest) -> DeviceDeployResu
     stays simulated by design (see README for why).
     """
     # Validate: reject a serial number that's already been deployed.
-    existing = db.query(DeviceModel).filter(DeviceModel.hostname == request.serial_number).first()
+    existing = db.query(DeviceModel).filter(DeviceModel.serial_number == request.serial_number).first()
     if existing:
         _write_audit(db, "DEVICE_DEPLOYMENT", request.serial_number, "FAILED")
         return DeviceDeployResult(
             success=False,
-            message=f"Device {request.serial_number} is already deployed - refusing to create a duplicate.",
+            message=f"Serial {request.serial_number} is already deployed - refusing to create a duplicate.",
             policy_assigned=None,
             dry_run=DRY_RUN,
         )
@@ -92,7 +93,8 @@ def deploy_device(db: Session, request: DeviceDeployRequest) -> DeviceDeployResu
     policy = _POLICY_MAP.get(request.department, "Default-Policy")
 
     new_device = DeviceModel(
-        hostname=request.serial_number,
+        hostname=request.hostname,
+        serial_number=request.serial_number,
         assigned_user=request.assigned_user,
         os="Unknown (Pending Enrollment)",
         device_type=request.device_type,
@@ -104,11 +106,11 @@ def deploy_device(db: Session, request: DeviceDeployRequest) -> DeviceDeployResu
     db.add(new_device)
     db.commit()
 
-    _write_audit(db, "DEVICE_DEPLOYMENT", request.serial_number, "SUCCESS")
+    _write_audit(db, "DEVICE_DEPLOYMENT", request.hostname, "SUCCESS")
 
     return DeviceDeployResult(
         success=True,
-        message=f"Device {request.serial_number} assigned to {request.assigned_user}",
+        message=f"Device {request.hostname} (serial {request.serial_number}) assigned to {request.assigned_user}",
         policy_assigned=policy,
         dry_run=DRY_RUN,
     )
