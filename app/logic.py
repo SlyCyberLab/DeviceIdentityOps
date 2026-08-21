@@ -156,7 +156,12 @@ def process_onboarding_requests(db: Session) -> ProcessRequestsResult:
             graph_client.send_mail(
                 to_address=req["manager_email"],
                 subject=f"New hire provisioned: {req['display_name']}",
-                body=f"{req['display_name']} has been provisioned with UPN {user['userPrincipalName']}.",
+                body=(
+                    f"{req['display_name']} has been provisioned.\n"
+                    f"UPN: {user['userPrincipalName']}\n"
+                    f"Temporary password: {user.get('_temp_password', '(not available)')}\n"
+                    f"They will be required to change it at first sign-in."
+                ),
             )
             db.add(EmployeeModel(
                 name=req["display_name"], department=req["department"],
