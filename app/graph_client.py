@@ -73,8 +73,11 @@ def _headers() -> dict:
     }
 
 
-def _get(path: str, params: dict = None) -> dict:
-    resp = requests.get(f"{GRAPH_BASE}{path}", headers=_headers(), params=params)
+def _get(path: str, params: dict = None, extra_headers: dict = None) -> dict:
+    headers = _headers()
+    if extra_headers:
+        headers.update(extra_headers)
+    resp = requests.get(f"{GRAPH_BASE}{path}", headers=headers, params=params)
     resp.raise_for_status()
     return resp.json()
 
@@ -107,9 +110,12 @@ def get_managed_devices() -> list[dict]:
 
 def _get_pending_requests(list_id: str) -> list[dict]:
     site_id = os.getenv("SHAREPOINT_SITE_ID")
+    # Status isn't an indexed SharePoint column, so Graph requires this header
+    # to allow filtering on it - without it, the query returns a 400.
     data = _get(
         f"/sites/{site_id}/lists/{list_id}/items",
         params={"expand": "fields", "$filter": "fields/Status eq 'Pending'"},
+        extra_headers={"Prefer": "HonorNonIndexedQueriesWarningMayFailRandomly"},
     )
     items = []
     for item in data.get("value", []):

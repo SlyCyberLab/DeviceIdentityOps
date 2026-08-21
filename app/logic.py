@@ -148,8 +148,15 @@ def process_onboarding_requests(db: Session) -> ProcessRequestsResult:
             results=["Microsoft Graph not configured yet - set TENANT_ID/CLIENT_ID/CLIENT_SECRET in .env (Phase 8)."],
         )
 
+    try:
+        pending = graph_client.get_pending_onboarding_requests()
+    except Exception as exc:
+        return ProcessRequestsResult(
+            processed_count=0,
+            results=[f"Failed to read pending requests from SharePoint: {exc}"],
+        )
+
     results = []
-    pending = graph_client.get_pending_onboarding_requests()
     for req in pending:
         try:
             user = graph_client.create_user(req["display_name"], req["department"])
@@ -194,8 +201,15 @@ def process_offboarding_requests(db: Session) -> ProcessRequestsResult:
             results=["Microsoft Graph not configured yet - set TENANT_ID/CLIENT_ID/CLIENT_SECRET in .env (Phase 8)."],
         )
 
+    try:
+        pending = graph_client.get_pending_offboarding_requests()
+    except Exception as exc:
+        return ProcessRequestsResult(
+            processed_count=0,
+            results=[f"Failed to read pending requests from SharePoint: {exc}"],
+        )
+
     results = []
-    pending = graph_client.get_pending_offboarding_requests()
     for req in pending:
         try:
             graph_client.disable_user(req["user_id"])
