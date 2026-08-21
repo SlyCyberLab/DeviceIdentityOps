@@ -135,6 +135,7 @@ def get_pending_onboarding_requests() -> list[dict]:
         requests_out.append({
             "display_name": f"{r.get('FirstName', '')} {r.get('LastName', '')}".strip(),
             "department": r.get("Department", ""),
+            "start_date": str(r.get("StartDate", ""))[:10],
             "manager_email": r.get("ManagerEmail", ""),
             "license_sku": BUSINESS_PREMIUM_SKU_ID,
             "access_group": None,  # set once an access group exists; optional for now
@@ -151,9 +152,10 @@ def get_pending_offboarding_requests() -> list[dict]:
     requests_out = []
     for r in raw:
         requests_out.append({
-            "display_name": r.get("DisplayName", ""),
+            "display_name": r.get("DisplayName", "") or r.get("Title", ""),
             "upn": r.get("UPN", ""),
             "user_id": r.get("UPN", ""),  # Graph's /users/{id} accepts UPN as an alternate key
+            "last_working_day": str(r.get("LastWorkingDay", ""))[:10],
             "manager_email": r.get("ManagerEmail", ""),
             "license_sku": BUSINESS_PREMIUM_SKU_ID,
             "access_group": None,

@@ -165,12 +165,26 @@ def process_onboarding_requests(db: Session) -> ProcessRequestsResult:
             graph_client.add_to_group(user["id"], group_id=req.get("access_group"))
             graph_client.send_mail(
                 to_address=req["manager_email"],
-                subject=f"New hire provisioned: {req['display_name']}",
+                subject=f"New hire account provisioned: {req['display_name']}",
                 body=(
-                    f"{req['display_name']} has been provisioned.\n"
-                    f"UPN: {user['userPrincipalName']}\n"
+                    f"Hello,\n"
+                    f"\n"
+                    f"The account for the new employee has been provisioned.\n"
+                    f"\n"
+                    f"Employee:      {req['display_name']}\n"
+                    f"Username:      {user['userPrincipalName']}\n"
+                    f"Department:    {req['department']}\n"
+                    f"Start date:    {req.get('start_date', '')}\n"
+                    f"\n"
                     f"Temporary password: {user.get('_temp_password', '(not available)')}\n"
-                    f"They will be required to change it at first sign-in."
+                    f"\n"
+                    f"Microsoft 365 portal: https://www.office.com\n"
+                    f"\n"
+                    f"The employee will be required to change their password at first sign-in,\n"
+                    f"and must complete MFA registration during their first login.\n"
+                    f"\n"
+                    f"Please share these credentials with the new hire securely on their start\n"
+                    f"date. Do not forward this email externally.\n"
                 ),
             )
             db.add(EmployeeModel(
@@ -223,10 +237,26 @@ def process_offboarding_requests(db: Session) -> ProcessRequestsResult:
             graph_client.invalidate_sessions(req["user_id"])
             graph_client.remove_license(req["user_id"], sku_id=req.get("license_sku"))
             graph_client.remove_from_group(req["user_id"], group_id=req.get("access_group"))
+            offboard_name = req["display_name"] or req["upn"]
             graph_client.send_mail(
                 to_address=req["manager_email"],
-                subject=f"Offboarding complete: {req['display_name']}",
-                body=f"{req['display_name']}'s access has been revoked and license reclaimed.",
+                subject=f"Offboarding completed: {offboard_name}",
+                body=(
+                    f"Hello,\n"
+                    f"\n"
+                    f"Offboarding has been completed for the following employee.\n"
+                    f"\n"
+                    f"Employee:          {offboard_name}\n"
+                    f"Username:          {req['upn']}\n"
+                    f"Last working day:  {req.get('last_working_day', '')}\n"
+                    f"\n"
+                    f"Actions taken:\n"
+                    f"  - Account sign-in disabled\n"
+                    f"  - All active sessions revoked\n"
+                    f"  - License removed and reclaimed\n"
+                    f"\n"
+                    f"If this offboarding was submitted in error, contact IT immediately.\n"
+                ),
             )
             employee = db.query(EmployeeModel).filter(EmployeeModel.upn == req["upn"]).first()
             if employee:
@@ -274,6 +304,7 @@ def submit_onboarding_request(db: Session, request: OnboardingRequestSubmit) -> 
         )
     try:
         graph_client.create_onboarding_request({
+            "Title": f"{request.first_name} {request.last_name}",
             "FirstName": request.first_name,
             "LastName": request.last_name,
             "Department": request.department,
@@ -297,6 +328,7 @@ def submit_offboarding_request(db: Session, request: OffboardingRequestSubmit) -
         )
     try:
         graph_client.create_offboarding_request({
+            "Title": request.display_name,
             "UPN": request.upn,
             "DisplayName": request.display_name,
             "ManagerEmail": request.manager_email,
