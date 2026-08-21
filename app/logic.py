@@ -178,9 +178,16 @@ def process_onboarding_requests(db: Session) -> ProcessRequestsResult:
                 manager_email=req["manager_email"], upn=user["userPrincipalName"],
                 status="Completed",
             ))
-            graph_client.write_back_status(req["list_id"], req["item_id"], "Completed", upn=user["userPrincipalName"])
+            # The real provisioning (user, license, email) already succeeded by this
+            # point - a failure writing the status back to SharePoint shouldn't be
+            # reported as an onboarding failure, just noted separately.
+            try:
+                graph_client.write_back_status(req["list_id"], req["item_id"], "Completed", upn=user["userPrincipalName"])
+                writeback_note = ""
+            except Exception as wb_exc:
+                writeback_note = f" (SharePoint status write-back failed: {wb_exc})"
             _write_audit(db, "ONBOARDING", req["display_name"], "SUCCESS")
-            results.append(f"{req['display_name']}: provisioned")
+            results.append(f"{req['display_name']}: provisioned{writeback_note}")
         except Exception as exc:
             _write_audit(db, "ONBOARDING", req.get("display_name", "unknown"), "FAILED")
             results.append(f"{req.get('display_name', 'unknown')}: failed - {exc}")
@@ -224,9 +231,13 @@ def process_offboarding_requests(db: Session) -> ProcessRequestsResult:
             employee = db.query(EmployeeModel).filter(EmployeeModel.upn == req["upn"]).first()
             if employee:
                 employee.status = "Offboarded"
-            graph_client.write_back_status(req["list_id"], req["item_id"], "Completed")
+            try:
+                graph_client.write_back_status(req["list_id"], req["item_id"], "Completed")
+                writeback_note = ""
+            except Exception as wb_exc:
+                writeback_note = f" (SharePoint status write-back failed: {wb_exc})"
             _write_audit(db, "OFFBOARDING", req["display_name"], "SUCCESS")
-            results.append(f"{req['display_name']}: offboarded")
+            results.append(f"{req['display_name']}: offboarded{writeback_note}")
         except Exception as exc:
             _write_audit(db, "OFFBOARDING", req.get("display_name", "unknown"), "FAILED")
             results.append(f"{req.get('display_name', 'unknown')}: failed - {exc}")
