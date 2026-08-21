@@ -60,6 +60,7 @@ def get_devices(db: Session) -> list[DeviceOut]:
             hostname=d.hostname,
             assigned_user=d.assigned_user,
             os=d.os,
+            device_type=d.device_type,
             compliance_status=d.compliance_status,
             encryption_status=d.encryption_status,
             last_checkin=d.last_checkin,
@@ -93,7 +94,8 @@ def deploy_device(db: Session, request: DeviceDeployRequest) -> DeviceDeployResu
     new_device = DeviceModel(
         hostname=request.serial_number,
         assigned_user=request.assigned_user,
-        os=request.device_type,
+        os="Unknown (Pending Enrollment)",
+        device_type=request.device_type,
         compliance_status="Pending Enrollment",
         encryption_status="Pending Enrollment",
         last_checkin="Not yet checked in",
@@ -110,6 +112,21 @@ def deploy_device(db: Session, request: DeviceDeployRequest) -> DeviceDeployResu
         policy_assigned=policy,
         dry_run=DRY_RUN,
     )
+
+
+def remove_device(db: Session, device_id: int) -> DeviceDeployResult:
+    """Removes a device record and logs the removal. Only affects DeviceIdentityOps's
+    own record - does not touch Intune enrollment (that's a separate, real action
+    that would need graph_client in Phase 8)."""
+    device = db.query(DeviceModel).filter(DeviceModel.id == device_id).first()
+    if not device:
+        return DeviceDeployResult(success=False, message="Device not found.", policy_assigned=None, dry_run=DRY_RUN)
+
+    hostname = device.hostname
+    db.delete(device)
+    db.commit()
+    _write_audit(db, "DEVICE_REMOVED", hostname, "SUCCESS")
+    return DeviceDeployResult(success=True, message=f"Device {hostname} removed.", policy_assigned=None, dry_run=DRY_RUN)
 
 
 def process_onboarding_requests(db: Session) -> ProcessRequestsResult:

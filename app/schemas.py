@@ -19,6 +19,7 @@ class DeviceOut(BaseModel):
     hostname: str
     assigned_user: Optional[str] = None
     os: str
+    device_type: Optional[str] = None
     compliance_status: str          # "Compliant" | "Non-Compliant"
     encryption_status: str          # "Encrypted" | "Not Encrypted"
     last_checkin: str

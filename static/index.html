@@ -117,7 +117,7 @@
   <h2>Devices</h2>
   <table id="deviceTable">
     <thead>
-      <tr><th>Hostname</th><th>User</th><th>OS</th><th>Compliance</th><th>Encryption</th><th>Management</th></tr>
+      <tr><th>Hostname</th><th>User</th><th>OS</th><th>Type</th><th>Compliance</th><th>Encryption</th><th>Management</th><th></th></tr>
     </thead>
     <tbody id="deviceRows"></tbody>
   </table>
@@ -189,6 +189,13 @@ function explainCompliance(device) {
   return "Failed checks: " + issues.join("; ") + ". Recommended: verify Defender status and re-run BitLocker enablement, then check compliance again in Intune.";
 }
 
+async function removeDevice(id) {
+  if (!confirm("Remove this device from DeviceIdentityOps?")) return;
+  await fetch(`/api/devices/${id}`, { method: "DELETE" });
+  loadDevices();
+  loadAudit();
+}
+
 async function loadDevices() {
   const devices = await fetchJSON("/api/devices");
   const rows = document.getElementById("deviceRows");
@@ -200,9 +207,11 @@ async function loadDevices() {
       <td>${d.hostname}</td>
       <td>${d.assigned_user || "-"}</td>
       <td>${d.os}</td>
+      <td>${d.device_type || "-"}</td>
       <td><span class="badge ${d.compliance_status === 'Compliant' ? 'good' : 'bad'}">${d.compliance_status}</span></td>
       <td><span class="badge ${d.encryption_status === 'Encrypted' ? 'good' : 'bad'}">${d.encryption_status}</span></td>
       <td>${d.management_status}</td>
+      <td><button class="secondary" style="padding:4px 10px;font-size:12px;" onclick="event.stopPropagation(); removeDevice(${d.id})">Remove</button></td>
     `;
     tr.onclick = () => {
       const panel = document.getElementById("deviceDetail");

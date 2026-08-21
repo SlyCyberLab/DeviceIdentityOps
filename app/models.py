@@ -18,6 +18,7 @@ class Device(Base):
     hostname = Column(String, nullable=False)
     assigned_user = Column(String, nullable=True)
     os = Column(String, nullable=False)
+    device_type = Column(String, nullable=True)  # Laptop, Desktop, etc. - distinct from OS
     compliance_status = Column(String, nullable=False, default="Unknown")
     encryption_status = Column(String, nullable=False, default="Unknown")
     last_checkin = Column(String, nullable=True)

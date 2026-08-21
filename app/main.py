@@ -64,6 +64,12 @@ def deploy_device(request: DeviceDeployRequest, db: Session = Depends(get_db)):
     return logic.deploy_device(db, request)
 
 
+@app.delete("/api/devices/{device_id}", response_model=DeviceDeployResult)
+def remove_device(device_id: int, db: Session = Depends(get_db)):
+    """Removes a device from DeviceIdentityOps's own record and logs it."""
+    return logic.remove_device(db, device_id)
+
+
 # ---------- Onboarding / Offboarding ----------
 
 @app.post("/api/onboarding/process", response_model=ProcessRequestsResult)
