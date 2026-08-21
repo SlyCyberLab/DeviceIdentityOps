@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DeviceIdentityOps</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f2f1;
+      color: #201f1e;
+      margin: 0;
+      padding: 40px;
+    }
+    h1 { font-weight: 600; }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      background: #dff6dd;
+      color: #0b6a0b;
+      font-size: 14px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <h1>DeviceIdentityOps</h1>
+  <p>Skeleton is wired up. <span class="status" id="status">checking...</span></p>
+
+  <script>
+    fetch("/api/health")
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById("status").textContent =
+          data.status === "ok" ? "API reachable" : "API responded, unexpected status";
+      })
+      .catch(() => {
+        document.getElementById("status").textContent = "API unreachable";
+        document.getElementById("status").style.background = "#fde7e9";
+        document.getElementById("status").style.color = "#a4262c";
+      });
+  </script>
+</body>
+</html>
