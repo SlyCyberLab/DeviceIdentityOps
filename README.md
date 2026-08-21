@@ -12,8 +12,15 @@ their own.
 
 ## Status
 
-Phase 2 - project skeleton. API runs, serves a static frontend, health
-check works. No real features yet.
+Phases 1-5, 7, 9, and most of 6 are done. The device dashboard, deployment
+workflow, audit trail, and full frontend are real and working against
+SQLite. Onboarding/offboarding logic is fully written and wired to a
+Microsoft Graph client seam - it just reports "not configured" until
+Phase 8 supplies a real Entra ID app registration and SharePoint list IDs.
+
+That's the one remaining step that needs actual Azure/Entra work outside
+this codebase: standing up the Microsoft 365 Business Premium trial,
+registering an app, and enrolling one real VM in Intune.
 
 ## Stack
 
@@ -43,6 +50,15 @@ docker build -t deviceidentityops .
 docker run -p 8000:8000 --env-file .env deviceidentityops
 ```
 
+SQLite lives inside the container by default - fine for demo purposes, but
+mount a volume if you want data to survive a container restart:
+
+```bash
+docker run -p 8000:8000 --env-file .env -v $(pwd)/data:/app/data deviceidentityops
+```
+
+(and set `DATABASE_URL=sqlite:////app/data/deviceidentityops.db` in `.env`)
+
 ## Project structure
 
 ```
@@ -67,13 +83,36 @@ deviceidentityops/
 
 - [x] Phase 1: MVP specification
 - [x] Phase 2: project skeleton
-- [ ] Phase 3: FastAPI backend routes
-- [ ] Phase 4: SQLite models
-- [ ] Phase 5: device dashboard + deployment workflow
-- [ ] Phase 6: onboarding/offboarding via SharePoint list front door
-- [ ] Phase 7: audit logging
-- [ ] Phase 8: Microsoft Graph integration (real Intune device, real Entra ID actions)
-- [ ] Phase 9: frontend dashboard
-- [ ] Phase 10: Docker
+- [x] Phase 3: FastAPI backend routes
+- [x] Phase 4: SQLite models
+- [x] Phase 5: device dashboard + deployment workflow (with duplicate-serial validation)
+- [x] Phase 6: onboarding/offboarding logic - fully written, wired to a Graph
+      client seam that reports "not configured" until Phase 8
+- [x] Phase 7: audit logging
+- [ ] **Phase 8: Microsoft Graph integration - needs a Business Premium
+      tenant, an Entra ID app registration, and one real Intune-enrolled
+      VM. This is the next step, and it happens outside this codebase.**
+- [x] Phase 9: frontend dashboard (health bar, device table, detail panel,
+      deploy form, onboarding/offboarding triggers, audit log)
+- [x] Phase 10: Docker (build-tested structure; not build-verified in this
+      environment - verify on your own Docker server)
 - [ ] Phase 11: testing
 - [ ] Phase 12: interview demo prep
+
+## What Phase 8 needs before it can be built
+
+1. Microsoft 365 Business Premium 30-day trial (cloud-only tenant)
+2. One Entra ID app registration with application permissions:
+   `User.ReadWrite.All`, `Group.ReadWrite.All`, `Sites.ReadWrite.All`,
+   `DeviceManagementManagedDevices.Read.All`, `Mail.Send` - admin consent
+   granted on each
+3. A client secret, dropped into `.env` as `TENANT_ID` / `CLIENT_ID` /
+   `CLIENT_SECRET`
+4. One SharePoint site with two lists (New Hire Requests, Offboarding
+   Requests), matching the columns from the Identity Lifecycle Automation
+   project
+5. One Proxmox VM enrolled in Intune, so `get_managed_devices()` has a real
+   device to return
+
+Once those exist, Phase 8 is filling in the `NotImplementedError` bodies in
+`graph_client.py` - nothing in `main.py` or `logic.py` needs to change.
