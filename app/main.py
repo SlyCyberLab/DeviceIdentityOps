@@ -23,6 +23,7 @@ from app.schemas import (
     OnboardingRequestSubmit,
     OffboardingRequestSubmit,
     SubmitResult,
+    IntuneSyncResult,
 )
 
 
@@ -71,6 +72,12 @@ def deploy_device(request: DeviceDeployRequest, db: Session = Depends(get_db)):
 def remove_device(device_id: int, db: Session = Depends(get_db)):
     """Removes a device from DeviceIdentityOps's own record and logs it."""
     return logic.remove_device(db, device_id)
+
+
+@app.post("/api/devices/refresh-intune", response_model=IntuneSyncResult)
+def refresh_intune(db: Session = Depends(get_db)):
+    """Sync trigger: pull managed devices from Intune and upsert into the local table."""
+    return logic.refresh_intune_devices(db)
 
 
 # ---------- Onboarding / Offboarding ----------

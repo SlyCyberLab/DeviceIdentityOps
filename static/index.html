@@ -149,6 +149,11 @@
   details.card > .card-body { padding: 0 16px 16px 16px; }
 
   .section-caption { font-size: 12px; color: var(--text-muted); margin: -6px 0 12px 0; }
+  .live-badge {
+    display: inline-block; background: #e6f2fb; color: var(--accent);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+    padding: 2px 8px; border-radius: 10px; vertical-align: middle; margin-left: 6px;
+  }
 </style>
 </head>
 <body>
@@ -159,7 +164,20 @@
 <div class="health-bar" id="healthBar"></div>
 
 <section>
-  <h2>Devices</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <h2 style="margin:0;">Intune-Managed Devices <span class="live-badge">LIVE</span></h2>
+    <button class="secondary" id="refreshIntune" style="padding:6px 14px;font-size:13px;">Refresh from Intune</button>
+  </div>
+  <table id="intuneTable">
+    <thead>
+      <tr><th>Hostname</th><th>Serial</th><th>User</th><th>OS</th><th>Type</th><th>Compliance</th><th>Encryption</th><th>Last Sync</th><th></th></tr>
+    </thead>
+    <tbody id="intuneRows"></tbody>
+  </table>
+  <p class="section-caption" id="intuneEmpty" style="display:none;">No Intune devices synced yet &mdash; click Refresh from Intune.</p>
+  <div id="refreshResult"></div>
+
+  <h2 style="margin-top:24px;">Demo Fleet <span class="hint" style="font-weight:400;font-size:12px;color:var(--text-muted);">(seeded mock devices)</span></h2>
   <table id="deviceTable">
     <thead>
       <tr><th>Hostname</th><th>Serial</th><th>User</th><th>OS</th><th>Type</th><th>Compliance</th><th>Encryption</th><th>Management</th><th></th></tr>
@@ -292,34 +310,45 @@ async function removeDevice(id) {
   loadAudit();
 }
 
+function deviceRow(d, isIntune) {
+  const tr = document.createElement("tr");
+  tr.className = "clickable";
+  tr.innerHTML = `
+    <td>${d.hostname}</td>
+    <td>${d.serial_number || "-"}</td>
+    <td>${d.assigned_user || "-"}</td>
+    <td>${d.os}</td>
+    <td>${d.device_type || "-"}</td>
+    <td><span class="badge ${d.compliance_status === 'Compliant' ? 'good' : 'bad'}">${d.compliance_status}</span></td>
+    <td><span class="badge ${d.encryption_status === 'Encrypted' ? 'good' : 'bad'}">${d.encryption_status}</span></td>
+    <td>${isIntune ? (d.last_checkin || "-").substring(0, 16).replace("T", " ") : d.management_status}</td>
+    <td><button class="secondary" style="padding:4px 10px;font-size:12px;" onclick="event.stopPropagation(); removeDevice(${d.id})">Remove</button></td>
+  `;
+  tr.onclick = () => {
+    const panel = document.getElementById("deviceDetail");
+    panel.innerHTML = `
+      <strong>${d.hostname}</strong> - last check-in: ${d.last_checkin}
+      <div class="explanation">${explainCompliance(d)}</div>
+    `;
+    panel.classList.add("open");
+  };
+  return tr;
+}
+
 async function loadDevices() {
   const devices = await fetchJSON("/api/devices");
+
+  const intuneDevices = devices.filter(d => d.management_status === "Intune (Live)");
+  const demoDevices = devices.filter(d => d.management_status !== "Intune (Live)");
+
+  const intuneRows = document.getElementById("intuneRows");
+  intuneRows.innerHTML = "";
+  intuneDevices.forEach(d => intuneRows.appendChild(deviceRow(d, true)));
+  document.getElementById("intuneEmpty").style.display = intuneDevices.length ? "none" : "block";
+
   const rows = document.getElementById("deviceRows");
   rows.innerHTML = "";
-  devices.forEach(d => {
-    const tr = document.createElement("tr");
-    tr.className = "clickable";
-    tr.innerHTML = `
-      <td>${d.hostname}</td>
-      <td>${d.serial_number || "-"}</td>
-      <td>${d.assigned_user || "-"}</td>
-      <td>${d.os}</td>
-      <td>${d.device_type || "-"}</td>
-      <td><span class="badge ${d.compliance_status === 'Compliant' ? 'good' : 'bad'}">${d.compliance_status}</span></td>
-      <td><span class="badge ${d.encryption_status === 'Encrypted' ? 'good' : 'bad'}">${d.encryption_status}</span></td>
-      <td>${d.management_status}</td>
-      <td><button class="secondary" style="padding:4px 10px;font-size:12px;" onclick="event.stopPropagation(); removeDevice(${d.id})">Remove</button></td>
-    `;
-    tr.onclick = () => {
-      const panel = document.getElementById("deviceDetail");
-      panel.innerHTML = `
-        <strong>${d.hostname}</strong> - last check-in: ${d.last_checkin}
-        <div class="explanation">${explainCompliance(d)}</div>
-      `;
-      panel.classList.add("open");
-    };
-    rows.appendChild(tr);
-  });
+  demoDevices.forEach(d => rows.appendChild(deviceRow(d, false)));
 
   const compliant = devices.filter(d => d.compliance_status === "Compliant").length;
   const nonCompliant = devices.length - compliant;
@@ -428,6 +457,19 @@ document.getElementById("processOffboarding").addEventListener("click", async ()
   const result = await fetchJSON("/api/offboarding/process", { method: "POST" });
   document.getElementById("processResult").innerHTML =
     `<div class="result-msg success">Offboarding: ${result.results.join("; ")}</div>`;
+  loadAudit();
+});
+
+document.getElementById("refreshIntune").addEventListener("click", async () => {
+  const btn = document.getElementById("refreshIntune");
+  btn.disabled = true;
+  btn.textContent = "Syncing...";
+  const result = await fetchJSON("/api/devices/refresh-intune", { method: "POST" });
+  document.getElementById("refreshResult").innerHTML =
+    `<div class="result-msg ${result.success ? 'success' : 'error'}">${result.message}</div>`;
+  btn.disabled = false;
+  btn.textContent = "Refresh from Intune";
+  loadDevices();
   loadAudit();
 });
 

@@ -80,3 +80,9 @@ class OffboardingRequestSubmit(BaseModel):
 class SubmitResult(BaseModel):
     success: bool
     message: str
+
+
+class IntuneSyncResult(BaseModel):
+    success: bool
+    synced_count: int
+    message: str

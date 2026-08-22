@@ -21,30 +21,6 @@ _SEED_DEVICES = [
         encryption_status="Not Encrypted", last_checkin="2026-08-18T09:15:00Z",
         management_status="Seeded (Demo)",
     ),
-    dict(
-        hostname="OPS-LAP-007", serial_number="SN-2026-A003", assigned_user="priya.raman@example.com",
-        os="Windows 11", device_type="Laptop", compliance_status="Compliant",
-        encryption_status="Encrypted", last_checkin="2026-08-20T08:47:00Z",
-        management_status="Seeded (Demo)",
-    ),
-    dict(
-        hostname="HR-LAP-003", serial_number="SN-2026-A004", assigned_user="carlos.mendez@example.com",
-        os="Windows 11", device_type="Laptop", compliance_status="Compliant",
-        encryption_status="Encrypted", last_checkin="2026-08-19T16:30:00Z",
-        management_status="Seeded (Demo)",
-    ),
-    dict(
-        hostname="ENG-LAP-021", serial_number="SN-2026-A005", assigned_user="alex.chen@example.com",
-        os="Windows 11", device_type="Laptop", compliance_status="Non-Compliant",
-        encryption_status="Not Encrypted", last_checkin="2026-08-15T11:05:00Z",
-        management_status="Seeded (Demo)",
-    ),
-    dict(
-        hostname="FIN-LAP-005", serial_number="SN-2026-A006", assigned_user="dana.reyes@example.com",
-        os="Windows 11", device_type="Laptop", compliance_status="Compliant",
-        encryption_status="Encrypted", last_checkin="2026-08-20T09:58:00Z",
-        management_status="Seeded (Demo)",
-    ),
 ]
 
 

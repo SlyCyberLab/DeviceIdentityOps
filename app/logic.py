@@ -26,6 +26,7 @@ from app.schemas import (
     OnboardingRequestSubmit,
     OffboardingRequestSubmit,
     SubmitResult,
+    IntuneSyncResult,
 )
 
 # Safety default: real device/identity actions stay simulated until this is
@@ -339,3 +340,55 @@ def submit_offboarding_request(db: Session, request: OffboardingRequestSubmit) -
     except Exception as exc:
         _write_audit(db, "OFFBOARDING_REQUEST_SUBMITTED", request.display_name, "FAILED")
         return SubmitResult(success=False, message=f"Failed to submit request: {exc}")
+
+
+def refresh_intune_devices(db: Session) -> IntuneSyncResult:
+    """
+    Pulls managed devices from Intune via Graph and upserts them into the
+    local device table (matched on Intune device id). Cached-with-manual-
+    refresh by design: the dashboard always renders instantly from the last
+    sync, and this is the sync trigger - the same pattern real inventory
+    tools use, rather than calling the MDM API on every page view.
+    """
+    if not graph_client.is_configured():
+        return IntuneSyncResult(success=False, synced_count=0,
+                                message="Microsoft Graph not configured yet.")
+    try:
+        intune_devices = graph_client.get_managed_devices()
+    except Exception as exc:
+        return IntuneSyncResult(success=False, synced_count=0,
+                                message=f"Failed to read from Intune: {exc}")
+
+    compliance_map = {
+        "compliant": "Compliant",
+        "noncompliant": "Non-Compliant",
+    }
+    synced = 0
+    for d in intune_devices:
+        intune_id = d.get("id")
+        if not intune_id:
+            continue
+        existing = db.query(DeviceModel).filter(DeviceModel.intune_id == intune_id).first()
+        os_name = f"{d.get('operatingSystem', 'Unknown')} {d.get('osVersion', '')}".strip()
+        values = dict(
+            hostname=d.get("deviceName", "(unknown)"),
+            serial_number=d.get("serialNumber") or None,
+            assigned_user=d.get("userPrincipalName") or None,
+            os=os_name,
+            device_type=d.get("model") or "Unknown",
+            compliance_status=compliance_map.get(str(d.get("complianceState", "")).lower(), "Not Evaluated"),
+            encryption_status="Encrypted" if d.get("isEncrypted") else "Not Encrypted",
+            last_checkin=str(d.get("lastSyncDateTime", "Unknown")),
+            management_status="Intune (Live)",
+            intune_id=intune_id,
+        )
+        if existing:
+            for k, v in values.items():
+                setattr(existing, k, v)
+        else:
+            db.add(DeviceModel(**values))
+        synced += 1
+    db.commit()
+    _write_audit(db, "INTUNE_SYNC", f"{synced} device(s)", "SUCCESS")
+    return IntuneSyncResult(success=True, synced_count=synced,
+                            message=f"Synced {synced} device(s) from Intune.")
