@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app import graph_client
+from app import monday_client
 from app.models import Device as DeviceModel, Employee as EmployeeModel, AuditLog as AuditLogModel
 from app.schemas import (
     DeviceOut,
@@ -54,6 +55,10 @@ def _write_audit(db: Session, action_type: str, target: str, result: str) -> Non
     )
     db.add(entry)
     db.commit()
+    # Mirror to Monday.com if configured - single integration point, so every
+    # audited action surfaces on the board with no per-call wiring. No-op when
+    # MONDAY_API_TOKEN isn't set, and never raises into the caller.
+    monday_client.post_event(action_type, target, result)
 
 
 def get_devices(db: Session) -> list[DeviceOut]:

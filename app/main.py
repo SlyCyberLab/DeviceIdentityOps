@@ -16,7 +16,6 @@ from app.database import engine, Base, get_db
 from app import logic, seed_data
 from app.schemas import (
     DeviceOut,
-    DeviceDeployRequest,
     DeviceDeployResult,
     ProcessRequestsResult,
     AuditLogOut,
@@ -60,12 +59,6 @@ def health_check():
 def list_devices(db: Session = Depends(get_db)):
     """Device dashboard data - seeded fleet now, merged with one real Intune device in Phase 8."""
     return logic.get_devices(db)
-
-
-@app.post("/api/devices/deploy", response_model=DeviceDeployResult)
-def deploy_device(request: DeviceDeployRequest, db: Session = Depends(get_db)):
-    """Validate -> assign -> determine policy -> record. Dry-run by default."""
-    return logic.deploy_device(db, request)
 
 
 @app.delete("/api/devices/{device_id}", response_model=DeviceDeployResult)

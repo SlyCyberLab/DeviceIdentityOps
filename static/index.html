@@ -154,6 +154,13 @@
     font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
     padding: 2px 8px; border-radius: 10px; vertical-align: middle; margin-left: 6px;
   }
+  .posture-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 8px; }
+  .posture-line { font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0; }
+  .detail-panel .kv { display: grid; grid-template-columns: 140px 1fr; gap: 4px 12px; margin: 4px 0; }
+  .detail-panel .kv .k { color: var(--text-muted); font-size: 13px; }
+  .detail-panel .kv .v { font-size: 13px; }
+  .detail-panel h3 { margin: 0 0 10px 0; font-size: 15px; }
+  .detail-panel .close-x { float: right; cursor: pointer; color: var(--text-muted); font-size: 18px; line-height: 1; }
 </style>
 </head>
 <body>
@@ -162,6 +169,12 @@
 <p class="subtitle">Device management, identity lifecycle, and audit trail on top of Microsoft 365 / Entra ID / Intune.</p>
 
 <div class="health-bar" id="healthBar"></div>
+
+<section>
+  <h2>Security Posture</h2>
+  <div class="posture-grid" id="postureGrid"></div>
+  <p class="posture-line" id="postureLine"></p>
+</section>
 
 <section>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -185,47 +198,6 @@
     <tbody id="deviceRows"></tbody>
   </table>
   <div class="detail-panel" id="deviceDetail"></div>
-</section>
-
-<section>
-  <h2>Device Actions</h2>
-  <details class="card">
-    <summary>Deploy New Device <span class="hint">assign a serial + hostname before imaging/enrollment</span></summary>
-    <div class="card-body">
-  <form id="deployForm">
-    <div>
-      <label>Serial Number</label>
-      <input type="text" id="serialNumber" required>
-    </div>
-    <div>
-      <label>Hostname (to assign)</label>
-      <input type="text" id="hostname" required placeholder="ENG-LAP-030">
-    </div>
-    <div>
-      <label>Assigned User</label>
-      <input type="text" id="assignedUser" required placeholder="name@example.com">
-    </div>
-    <div>
-      <label>Department</label>
-      <select id="department">
-        <option>Engineering</option>
-        <option>Sales</option>
-        <option>Operations</option>
-        <option>HR</option>
-        <option>Finance</option>
-      </select>
-    </div>
-    <div>
-      <label>Device Type</label>
-      <input type="text" id="deviceType" required placeholder="Laptop">
-    </div>
-    <div>
-      <button type="submit">Deploy Device</button>
-    </div>
-  </form>
-  <div id="deployResult"></div>
-    </div>
-  </details>
 </section>
 
 <section>
@@ -326,8 +298,20 @@ function deviceRow(d, isIntune) {
   `;
   tr.onclick = () => {
     const panel = document.getElementById("deviceDetail");
+    const src = isIntune ? "Live from Microsoft Intune" : "Seeded demo data";
     panel.innerHTML = `
-      <strong>${d.hostname}</strong> - last check-in: ${d.last_checkin}
+      <span class="close-x" onclick="document.getElementById('deviceDetail').classList.remove('open')">&times;</span>
+      <h3>${d.hostname}</h3>
+      <div class="kv">
+        <div class="k">Assigned to</div><div class="v">${d.assigned_user || "Unassigned"}</div>
+        <div class="k">Serial</div><div class="v">${d.serial_number || "-"}</div>
+        <div class="k">OS</div><div class="v">${d.os}</div>
+        <div class="k">Type</div><div class="v">${d.device_type || "-"}</div>
+        <div class="k">Compliance</div><div class="v"><span class="badge ${d.compliance_status === 'Compliant' ? 'good' : 'bad'}">${d.compliance_status}</span></div>
+        <div class="k">Encryption</div><div class="v"><span class="badge ${d.encryption_status === 'Encrypted' ? 'good' : 'bad'}">${d.encryption_status}</span></div>
+        <div class="k">Last check-in</div><div class="v">${d.last_checkin}</div>
+        <div class="k">Source</div><div class="v">${src}</div>
+      </div>
       <div class="explanation">${explainCompliance(d)}</div>
     `;
     panel.classList.add("open");
@@ -358,6 +342,35 @@ async function loadDevices() {
     <div class="stat-card"><div class="value">${nonCompliant}</div><div class="label">Non-Compliant</div></div>
     <div class="stat-card"><div class="value" id="actionsToday">-</div><div class="label">Audit Actions Logged</div></div>
   `;
+
+  renderPosture(devices);
+}
+
+function renderPosture(devices) {
+  const total = devices.length;
+  const compliant = devices.filter(d => d.compliance_status === "Compliant").length;
+  const encrypted = devices.filter(d => d.encryption_status === "Encrypted").length;
+  const managed = devices.filter(d => d.management_status === "Intune (Live)").length;
+  const pct = total ? Math.round((compliant / total) * 100) : 0;
+
+  document.getElementById("postureGrid").innerHTML = `
+    <div class="stat-card"><div class="value">${pct}%</div><div class="label">Compliance Rate</div></div>
+    <div class="stat-card"><div class="value">${encrypted}/${total}</div><div class="label">Encrypted (BitLocker)</div></div>
+    <div class="stat-card"><div class="value">${managed}</div><div class="label">Live Intune-Managed</div></div>
+  `;
+
+  let line;
+  if (total === 0) {
+    line = "No devices to evaluate.";
+  } else if (pct === 100 && encrypted === total) {
+    line = "All devices are compliant and encrypted. Baseline is being met across the fleet.";
+  } else {
+    const gaps = [];
+    if (compliant < total) gaps.push(`${total - compliant} device(s) failing compliance policy`);
+    if (encrypted < total) gaps.push(`${total - encrypted} device(s) without BitLocker encryption`);
+    line = "Attention needed: " + gaps.join("; ") + ". Compliance state reflects the Intune policy evaluation.";
+  }
+  document.getElementById("postureLine").textContent = line;
 }
 
 async function loadAudit() {
@@ -377,29 +390,6 @@ async function loadAudit() {
   const actionsEl = document.getElementById("actionsToday");
   if (actionsEl) actionsEl.textContent = entries.length;
 }
-
-document.getElementById("deployForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const body = {
-    serial_number: document.getElementById("serialNumber").value,
-    hostname: document.getElementById("hostname").value,
-    assigned_user: document.getElementById("assignedUser").value,
-    department: document.getElementById("department").value,
-    device_type: document.getElementById("deviceType").value,
-  };
-  const result = await fetchJSON("/api/devices/deploy", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const el = document.getElementById("deployResult");
-  el.innerHTML = `<div class="result-msg ${result.success ? 'success' : 'error'}">${result.message}${result.policy_assigned ? ' - policy: ' + result.policy_assigned : ''}${result.dry_run ? ' (dry-run)' : ''}</div>`;
-  if (result.success) {
-    document.getElementById("deployForm").reset();
-    loadDevices();
-    loadAudit();
-  }
-});
 
 document.getElementById("onboardForm").addEventListener("submit", async (e) => {
   e.preventDefault();
