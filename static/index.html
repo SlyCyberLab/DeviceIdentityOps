@@ -155,6 +155,18 @@
     padding: 2px 8px; border-radius: 10px; vertical-align: middle; margin-left: 6px;
   }
   .posture-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 8px; }
+  .observation {
+    font-size: 13px; padding: 8px 12px; border-left: 3px solid var(--accent);
+    background: #f5f9fd; border-radius: 0 4px 4px 0; margin: 6px 0; color: var(--text);
+  }
+  .badge.neutral { background: #edebe9; color: #484644; }
+  .badge.tool { background: #e6f2fb; color: var(--accent); }
+  .role-card {
+    display: inline-block; background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 14px; margin: 4px 8px 4px 0; font-size: 13px;
+  }
+  .role-card .role-name { font-weight: 600; margin-bottom: 4px; }
+  .role-card .role-member { color: var(--text-muted); font-size: 12px; }
   .posture-line { font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0; }
   .detail-panel .kv { display: grid; grid-template-columns: 140px 1fr; gap: 4px 12px; margin: 4px 0; }
   .detail-panel .kv .k { color: var(--text-muted); font-size: 13px; }
@@ -183,21 +195,30 @@
   </div>
   <table id="intuneTable">
     <thead>
-      <tr><th>Hostname</th><th>Serial</th><th>User</th><th>OS</th><th>Type</th><th>Compliance</th><th>Encryption</th><th>Last Sync</th><th></th></tr>
+      <tr><th>Hostname</th><th>Serial</th><th>User</th><th>OS</th><th>Type</th><th>Compliance</th><th>Encryption</th><th>Last Sync</th></tr>
     </thead>
     <tbody id="intuneRows"></tbody>
   </table>
   <p class="section-caption" id="intuneEmpty" style="display:none;">No Intune devices synced yet &mdash; click Refresh from Intune.</p>
   <div id="refreshResult"></div>
 
-  <h2 style="margin-top:24px;">Demo Fleet <span class="hint" style="font-weight:400;font-size:12px;color:var(--text-muted);">(seeded mock devices)</span></h2>
-  <table id="deviceTable">
-    <thead>
-      <tr><th>Hostname</th><th>Serial</th><th>User</th><th>OS</th><th>Type</th><th>Compliance</th><th>Encryption</th><th>Management</th><th></th></tr>
-    </thead>
-    <tbody id="deviceRows"></tbody>
-  </table>
   <div class="detail-panel" id="deviceDetail"></div>
+</section>
+
+<section>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <h2 style="margin:0;">Identity &amp; Access (IAM) <span class="live-badge">LIVE</span></h2>
+    <button class="secondary" id="refreshIdentity" style="padding:6px 14px;font-size:13px;">Refresh from Entra ID</button>
+  </div>
+  <div class="posture-grid" id="iamStats"></div>
+  <div id="iamObservations"></div>
+  <table>
+    <thead>
+      <tr><th>Name</th><th>UPN</th><th>Department</th><th>Status</th><th>License</th><th>Lifecycle</th></tr>
+    </thead>
+    <tbody id="iamUserRows"></tbody>
+  </table>
+  <div id="iamRoles" style="margin-top:14px;"></div>
 </section>
 
 <section>
@@ -275,12 +296,6 @@ function explainCompliance(device) {
   return "Failed checks: " + issues.join("; ") + ". Recommended: verify Defender status and re-run BitLocker enablement, then check compliance again in Intune.";
 }
 
-async function removeDevice(id) {
-  if (!confirm("Remove this device from DeviceIdentityOps?")) return;
-  await fetch(`/api/devices/${id}`, { method: "DELETE" });
-  loadDevices();
-  loadAudit();
-}
 
 function deviceRow(d, isIntune) {
   const tr = document.createElement("tr");
@@ -294,7 +309,6 @@ function deviceRow(d, isIntune) {
     <td><span class="badge ${d.compliance_status === 'Compliant' ? 'good' : 'bad'}">${d.compliance_status}</span></td>
     <td><span class="badge ${d.encryption_status === 'Encrypted' ? 'good' : 'bad'}">${d.encryption_status}</span></td>
     <td>${isIntune ? (d.last_checkin || "-").substring(0, 16).replace("T", " ") : d.management_status}</td>
-    <td><button class="secondary" style="padding:4px 10px;font-size:12px;" onclick="event.stopPropagation(); removeDevice(${d.id})">Remove</button></td>
   `;
   tr.onclick = () => {
     const panel = document.getElementById("deviceDetail");
@@ -323,16 +337,11 @@ async function loadDevices() {
   const devices = await fetchJSON("/api/devices");
 
   const intuneDevices = devices.filter(d => d.management_status === "Intune (Live)");
-  const demoDevices = devices.filter(d => d.management_status !== "Intune (Live)");
 
   const intuneRows = document.getElementById("intuneRows");
   intuneRows.innerHTML = "";
   intuneDevices.forEach(d => intuneRows.appendChild(deviceRow(d, true)));
   document.getElementById("intuneEmpty").style.display = intuneDevices.length ? "none" : "block";
-
-  const rows = document.getElementById("deviceRows");
-  rows.innerHTML = "";
-  demoDevices.forEach(d => rows.appendChild(deviceRow(d, false)));
 
   const compliant = devices.filter(d => d.compliance_status === "Compliant").length;
   const nonCompliant = devices.length - compliant;
@@ -463,7 +472,62 @@ document.getElementById("refreshIntune").addEventListener("click", async () => {
   loadAudit();
 });
 
+async function loadIdentity() {
+  const data = await fetchJSON("/api/identity");
+
+  const total = data.users.length;
+  const disabled = data.users.filter(u => !u.enabled).length;
+  const managed = data.users.filter(u => u.managed_by_tool).length;
+  const privCount = data.privileged_roles.reduce((n, r) => n + r.members.length, 0);
+  document.getElementById("iamStats").innerHTML = `
+    <div class="stat-card"><div class="value">${total}</div><div class="label">Tenant Users</div></div>
+    <div class="stat-card"><div class="value">${managed}</div><div class="label">Managed by This Tool</div></div>
+    <div class="stat-card"><div class="value">${disabled}</div><div class="label">Disabled Accounts</div></div>
+    <div class="stat-card"><div class="value">${data.roles_available ? privCount : "-"}</div><div class="label">Privileged Assignments</div></div>
+  `;
+
+  document.getElementById("iamObservations").innerHTML =
+    data.observations.map(o => `<div class="observation">${o}</div>`).join("");
+
+  const rows = document.getElementById("iamUserRows");
+  rows.innerHTML = "";
+  data.users.forEach(u => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${u.display_name}</td>
+      <td>${u.upn}</td>
+      <td>${u.department || "-"}</td>
+      <td><span class="badge ${u.enabled ? 'good' : 'bad'}">${u.enabled ? "Enabled" : "Disabled"}</span></td>
+      <td><span class="badge ${u.licensed ? 'good' : 'neutral'}">${u.licensed ? "Licensed" : "Unlicensed"}</span></td>
+      <td>${u.managed_by_tool ? '<span class="badge tool">Managed by this tool</span>' : '<span class="badge neutral">Pre-existing</span>'}</td>
+    `;
+    rows.appendChild(tr);
+  });
+
+  const rolesEl = document.getElementById("iamRoles");
+  if (!data.roles_available) {
+    rolesEl.innerHTML = "";
+  } else if (data.privileged_roles.length) {
+    rolesEl.innerHTML = "<strong style='font-size:14px;'>Privileged Roles (who has the keys)</strong><br>" +
+      data.privileged_roles.map(r => `
+        <div class="role-card">
+          <div class="role-name">${r.role_name} (${r.members.length})</div>
+          ${r.members.map(m => `<div class="role-member">${m}</div>`).join("")}
+        </div>`).join("");
+  } else {
+    rolesEl.innerHTML = "";
+  }
+}
+
+document.getElementById("refreshIdentity").addEventListener("click", async () => {
+  const btn = document.getElementById("refreshIdentity");
+  btn.disabled = true; btn.textContent = "Refreshing...";
+  await loadIdentity();
+  btn.disabled = false; btn.textContent = "Refresh from Entra ID";
+});
+
 loadDevices();
+loadIdentity();
 loadAudit();
 </script>
 </body>

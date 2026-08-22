@@ -2,7 +2,7 @@
 DeviceIdentityOps - main FastAPI application.
 
 Phase 4: routes are now backed by real SQLite persistence. Tables are
-created and the device fleet is seeded once on startup, via a lifespan
+created on startup via a lifespan
 context manager (the modern replacement for the old @app.on_event hook).
 """
 
@@ -13,28 +13,23 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from app.database import engine, Base, get_db
-from app import logic, seed_data
+from app import logic
 from app.schemas import (
     DeviceOut,
-    DeviceDeployResult,
     ProcessRequestsResult,
     AuditLogOut,
     OnboardingRequestSubmit,
     OffboardingRequestSubmit,
     SubmitResult,
     IntuneSyncResult,
+    IdentityOverview,
 )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: create tables if they don't exist, seed the mock fleet once.
+    # Startup: create tables if they don't exist. Devices come from the Intune sync.
     Base.metadata.create_all(bind=engine)
-    db = next(get_db())
-    try:
-        seed_data.seed_devices(db)
-    finally:
-        db.close()
     yield
     # (nothing needed on shutdown for SQLite)
 
@@ -57,20 +52,22 @@ def health_check():
 
 @app.get("/api/devices", response_model=list[DeviceOut])
 def list_devices(db: Session = Depends(get_db)):
-    """Device dashboard data - seeded fleet now, merged with one real Intune device in Phase 8."""
+    """Device dashboard data - devices synced live from Intune."""
     return logic.get_devices(db)
-
-
-@app.delete("/api/devices/{device_id}", response_model=DeviceDeployResult)
-def remove_device(device_id: int, db: Session = Depends(get_db)):
-    """Removes a device from DeviceIdentityOps's own record and logs it."""
-    return logic.remove_device(db, device_id)
 
 
 @app.post("/api/devices/refresh-intune", response_model=IntuneSyncResult)
 def refresh_intune(db: Session = Depends(get_db)):
     """Sync trigger: pull managed devices from Intune and upsert into the local table."""
     return logic.refresh_intune_devices(db)
+
+
+# ---------- Identity & Access (IAM) ----------
+
+@app.get("/api/identity", response_model=IdentityOverview)
+def identity_overview(db: Session = Depends(get_db)):
+    """Live IAM view: tenant users, tool-managed accounts, privileged roles."""
+    return logic.get_identity_overview(db)
 
 
 # ---------- Onboarding / Offboarding ----------

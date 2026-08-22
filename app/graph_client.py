@@ -284,3 +284,45 @@ def create_offboarding_request(fields: dict) -> dict:
     list_id = os.getenv("OFFBOARDING_LIST_ID")
     body = {"fields": {**fields, "Status": "Pending"}}
     return _post(f"/sites/{site_id}/lists/{list_id}/items", body)
+
+
+# ---------- Identity & Access (IAM) ----------
+
+def get_users() -> list[dict]:
+    """
+    GET /users - the tenant's user accounts with enabled state and license
+    presence. Feeds the Identity & Access view: the operational half of IAM
+    (who exists, who's disabled, who holds a license) - governance-depth
+    analysis (drift, scoring) deliberately lives in the separate
+    IdentityGovernancePortal project.
+    """
+    data = _get("/users", params={
+        "$select": "id,displayName,userPrincipalName,accountEnabled,assignedLicenses,department",
+        "$top": "50",
+    })
+    return data.get("value", [])
+
+
+def get_directory_roles() -> list[dict]:
+    """
+    GET /directoryRoles + members - who holds privileged roles ("who has
+    the keys"). Requires RoleManagement.Read.Directory; if that permission
+    isn't granted yet this raises, and the caller degrades gracefully with
+    an honest "unavailable" note rather than hiding the section.
+    """
+    roles = _get("/directoryRoles").get("value", [])
+    out = []
+    for role in roles:
+        members_data = _get(f"/directoryRoles/{role['id']}/members")
+        members = [
+            {
+                "displayName": m.get("displayName", ""),
+                "userPrincipalName": m.get("userPrincipalName", ""),
+            }
+            for m in members_data.get("value", [])
+        ]
+        out.append({
+            "roleName": role.get("displayName", ""),
+            "members": members,
+        })
+    return out

@@ -27,23 +27,6 @@ class DeviceOut(BaseModel):
     management_status: str          # "Intune-Managed" | "Seeded (Demo)"
 
 
-class DeviceDeployRequest(BaseModel):
-    serial_number: str
-    hostname: str          # the name IT is assigning during imaging - mirrors the MDT PUT pattern
-    assigned_user: str
-    department: str
-    device_type: str
-
-
-class DeviceDeployResult(BaseModel):
-    success: bool
-    message: str
-    policy_assigned: Optional[str] = None
-    dry_run: bool
-
-
-# ---------- Onboarding / Offboarding ----------
-
 class ProcessRequestsResult(BaseModel):
     processed_count: int
     results: list[str]
@@ -86,3 +69,26 @@ class IntuneSyncResult(BaseModel):
     success: bool
     synced_count: int
     message: str
+
+
+# ---------- Identity & Access (IAM) ----------
+
+class IdentityUser(BaseModel):
+    display_name: str
+    upn: str
+    enabled: bool
+    licensed: bool
+    department: Optional[str] = None
+    managed_by_tool: bool  # True if this tool provisioned or offboarded the account
+
+
+class PrivilegedRole(BaseModel):
+    role_name: str
+    members: list[str]
+
+
+class IdentityOverview(BaseModel):
+    users: list[IdentityUser]
+    privileged_roles: list[PrivilegedRole]
+    roles_available: bool          # False when RoleManagement.Read.Directory isn't granted
+    observations: list[str]

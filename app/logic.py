@@ -20,14 +20,15 @@ from app import monday_client
 from app.models import Device as DeviceModel, Employee as EmployeeModel, AuditLog as AuditLogModel
 from app.schemas import (
     DeviceOut,
-    DeviceDeployRequest,
-    DeviceDeployResult,
     ProcessRequestsResult,
     AuditLogOut,
     OnboardingRequestSubmit,
     OffboardingRequestSubmit,
     SubmitResult,
     IntuneSyncResult,
+    IdentityUser,
+    PrivilegedRole,
+    IdentityOverview,
 )
 
 # Safety default: real device/identity actions stay simulated until this is
@@ -37,13 +38,6 @@ DRY_RUN = True
 # Department -> Intune policy group. Deliberately simple - a real system
 # would look this up from a policy table, but the rule itself isn't the
 # point of the demo.
-_POLICY_MAP = {
-    "Engineering": "ENG-Standard-Policy",
-    "Sales": "SALES-Standard-Policy",
-    "Operations": "OPS-Standard-Policy",
-    "HR": "HR-Standard-Policy",
-    "Finance": "FIN-Standard-Policy",
-}
 
 
 def _write_audit(db: Session, action_type: str, target: str, result: str) -> None:
@@ -78,66 +72,6 @@ def get_devices(db: Session) -> list[DeviceOut]:
         )
         for d in devices
     ]
-
-
-def deploy_device(db: Session, request: DeviceDeployRequest) -> DeviceDeployResult:
-    """
-    Validate -> assign -> determine policy -> record.
-
-    "Deployed" here means a new row in the devices table with a status that
-    reflects it hasn't actually enrolled/checked in yet - this workflow
-    stays simulated by design (see README for why).
-    """
-    # Validate: reject a serial number that's already been deployed.
-    existing = db.query(DeviceModel).filter(DeviceModel.serial_number == request.serial_number).first()
-    if existing:
-        _write_audit(db, "DEVICE_DEPLOYMENT", request.serial_number, "FAILED")
-        return DeviceDeployResult(
-            success=False,
-            message=f"Serial {request.serial_number} is already deployed - refusing to create a duplicate.",
-            policy_assigned=None,
-            dry_run=DRY_RUN,
-        )
-
-    policy = _POLICY_MAP.get(request.department, "Default-Policy")
-
-    new_device = DeviceModel(
-        hostname=request.hostname,
-        serial_number=request.serial_number,
-        assigned_user=request.assigned_user,
-        os="Unknown (Pending Enrollment)",
-        device_type=request.device_type,
-        compliance_status="Pending Enrollment",
-        encryption_status="Pending Enrollment",
-        last_checkin="Not yet checked in",
-        management_status="Deployed (Dry-Run)" if DRY_RUN else "Deployed",
-    )
-    db.add(new_device)
-    db.commit()
-
-    _write_audit(db, "DEVICE_DEPLOYMENT", request.hostname, "SUCCESS")
-
-    return DeviceDeployResult(
-        success=True,
-        message=f"Device {request.hostname} (serial {request.serial_number}) assigned to {request.assigned_user}",
-        policy_assigned=policy,
-        dry_run=DRY_RUN,
-    )
-
-
-def remove_device(db: Session, device_id: int) -> DeviceDeployResult:
-    """Removes a device record and logs the removal. Only affects DeviceIdentityOps's
-    own record - does not touch Intune enrollment (that's a separate, real action
-    that would need graph_client in Phase 8)."""
-    device = db.query(DeviceModel).filter(DeviceModel.id == device_id).first()
-    if not device:
-        return DeviceDeployResult(success=False, message="Device not found.", policy_assigned=None, dry_run=DRY_RUN)
-
-    hostname = device.hostname
-    db.delete(device)
-    db.commit()
-    _write_audit(db, "DEVICE_REMOVED", hostname, "SUCCESS")
-    return DeviceDeployResult(success=True, message=f"Device {hostname} removed.", policy_assigned=None, dry_run=DRY_RUN)
 
 
 def process_onboarding_requests(db: Session) -> ProcessRequestsResult:
@@ -397,3 +331,80 @@ def refresh_intune_devices(db: Session) -> IntuneSyncResult:
     _write_audit(db, "INTUNE_SYNC", f"{synced} device(s)", "SUCCESS")
     return IntuneSyncResult(success=True, synced_count=synced,
                             message=f"Synced {synced} device(s) from Intune.")
+
+
+def get_identity_overview(db: Session) -> IdentityOverview:
+    """
+    The operational IAM view: tenant users (live from Entra), which of them
+    this tool itself provisioned or offboarded, and who holds privileged
+    directory roles. Observations follow the same plain-language pattern as
+    the IdentityGovernancePortal, scoped to what an operations tool should
+    surface - deeper governance (drift, scoring) lives in that project.
+    """
+    if not graph_client.is_configured():
+        return IdentityOverview(users=[], privileged_roles=[], roles_available=False,
+                                observations=["Microsoft Graph not configured yet."])
+
+    managed_upns = {e.upn for e in db.query(EmployeeModel).all() if e.upn}
+
+    users = []
+    try:
+        raw_users = graph_client.get_users()
+    except Exception as exc:
+        return IdentityOverview(users=[], privileged_roles=[], roles_available=False,
+                                observations=[f"Failed to read users from Entra ID: {exc}"])
+    for u in raw_users:
+        users.append(IdentityUser(
+            display_name=u.get("displayName", ""),
+            upn=u.get("userPrincipalName", ""),
+            enabled=bool(u.get("accountEnabled", False)),
+            licensed=len(u.get("assignedLicenses", [])) > 0,
+            department=u.get("department"),
+            managed_by_tool=u.get("userPrincipalName", "") in managed_upns,
+        ))
+
+    roles_available = True
+    privileged_roles = []
+    try:
+        for r in graph_client.get_directory_roles():
+            if r["members"]:  # only roles that actually have holders
+                privileged_roles.append(PrivilegedRole(
+                    role_name=r["roleName"],
+                    members=[m["userPrincipalName"] or m["displayName"] for m in r["members"]],
+                ))
+    except Exception:
+        # Most likely RoleManagement.Read.Directory not granted - degrade honestly.
+        roles_available = False
+
+    observations = []
+    disabled_licensed = [u for u in users if not u.enabled and u.licensed]
+    if disabled_licensed:
+        names = ", ".join(u.upn for u in disabled_licensed)
+        observations.append(
+            f"{len(disabled_licensed)} disabled account(s) still holding a license ({names}). "
+            f"Offboarding reclaims licenses; these were likely disabled outside the tool."
+        )
+    ga = next((r for r in privileged_roles if r.role_name == "Global Administrator"), None)
+    if ga:
+        if len(ga.members) > 2:
+            observations.append(
+                f"{len(ga.members)} Global Administrator accounts - above the recommended maximum of 2. "
+                f"Review whether each needs standing global rights."
+            )
+        else:
+            observations.append(
+                f"{len(ga.members)} Global Administrator account(s) - within the recommended limit."
+            )
+    if not roles_available:
+        observations.append(
+            "Privileged role data unavailable - grant RoleManagement.Read.Directory to the app "
+            "registration to enable this view."
+        )
+    tool_managed = [u for u in users if u.managed_by_tool]
+    if tool_managed:
+        observations.append(
+            f"{len(tool_managed)} account(s) in this tenant were provisioned or offboarded by DeviceIdentityOps."
+        )
+
+    return IdentityOverview(users=users, privileged_roles=privileged_roles,
+                            roles_available=roles_available, observations=observations)
