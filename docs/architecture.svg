@@ -1,0 +1,124 @@
+<svg width="680" height="1010" viewBox="0 0 680 1010" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="680" height="1010" fill="#fafaf9"/>
+
+  <!-- Title -->
+  <text x="340" y="34" text-anchor="middle" font-size="19" font-weight="700" fill="#201f1e">DeviceIdentityOps</text>
+  <text x="340" y="54" text-anchor="middle" font-size="11" fill="#605e5c">sleytech.com tenant &#8226; FastAPI &#8226; Microsoft Graph &#8226; Docker</text>
+
+  <!-- SECTION: MICROSOFT CLOUD -->
+  <text x="340" y="86" text-anchor="middle" font-size="10" letter-spacing="1.5" fill="#8a8886" font-weight="600">MICROSOFT CLOUD</text>
+  <rect x="40" y="96" width="140" height="52" rx="8" fill="#deecf9" stroke="#a9c8e8" stroke-width="1.5"/>
+  <text x="110" y="117" text-anchor="middle" font-size="12" font-weight="600" fill="#1b4a73">Entra ID</text>
+  <text x="110" y="133" text-anchor="middle" font-size="9" fill="#3b6ea5">users &#8226; licenses &#8226; roles</text>
+
+  <rect x="196" y="96" width="140" height="52" rx="8" fill="#deecf9" stroke="#a9c8e8" stroke-width="1.5"/>
+  <text x="266" y="117" text-anchor="middle" font-size="12" font-weight="600" fill="#1b4a73">Intune</text>
+  <text x="266" y="133" text-anchor="middle" font-size="9" fill="#3b6ea5">devices &#8226; compliance</text>
+
+  <rect x="352" y="96" width="140" height="52" rx="8" fill="#deecf9" stroke="#a9c8e8" stroke-width="1.5"/>
+  <text x="422" y="117" text-anchor="middle" font-size="12" font-weight="600" fill="#1b4a73">SharePoint</text>
+  <text x="422" y="133" text-anchor="middle" font-size="9" fill="#3b6ea5">request lists</text>
+
+  <rect x="508" y="96" width="132" height="52" rx="8" fill="#deecf9" stroke="#a9c8e8" stroke-width="1.5"/>
+  <text x="574" y="117" text-anchor="middle" font-size="12" font-weight="600" fill="#1b4a73">Exchange</text>
+  <text x="574" y="133" text-anchor="middle" font-size="9" fill="#3b6ea5">notifications</text>
+
+  <line x1="340" y1="148" x2="340" y2="180" stroke="#a19f9d" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- SECTION: AUTH -->
+  <text x="340" y="196" text-anchor="middle" font-size="10" letter-spacing="1.5" fill="#8a8886" font-weight="600">MICROSOFT GRAPH API</text>
+  <rect x="170" y="206" width="340" height="52" rx="8" fill="#e8e6f5" stroke="#b8b2dd" stroke-width="1.5"/>
+  <text x="340" y="227" text-anchor="middle" font-size="12" font-weight="600" fill="#4a4470">App-only authentication (MSAL)</text>
+  <text x="340" y="243" text-anchor="middle" font-size="9" fill="#6b64a0">client credentials &#8226; least-privilege scoped permissions</text>
+
+  <line x1="340" y1="258" x2="340" y2="290" stroke="#a19f9d" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- SECTION: APPLICATION -->
+  <text x="340" y="306" text-anchor="middle" font-size="10" letter-spacing="1.5" fill="#8a8886" font-weight="600">APPLICATION (FASTAPI, DOCKER ON PROXMOX LXC)</text>
+
+  <rect x="40" y="316" width="186" height="66" rx="8" fill="#f5f2e8" stroke="#d9d0b0" stroke-width="1.5"/>
+  <text x="133" y="338" text-anchor="middle" font-size="12" font-weight="600" fill="#6b5d2e">graph_client.py</text>
+  <text x="133" y="354" text-anchor="middle" font-size="9" fill="#8a7a45">every Graph call isolated</text>
+  <text x="133" y="368" text-anchor="middle" font-size="9" fill="#8a7a45">in one module</text>
+
+  <rect x="247" y="316" width="186" height="66" rx="8" fill="#f5f2e8" stroke="#d9d0b0" stroke-width="1.5"/>
+  <text x="340" y="338" text-anchor="middle" font-size="12" font-weight="600" fill="#6b5d2e">logic.py</text>
+  <text x="340" y="354" text-anchor="middle" font-size="9" fill="#8a7a45">joiner/leaver workflows</text>
+  <text x="340" y="368" text-anchor="middle" font-size="9" fill="#8a7a45">device sync &#8226; IAM overview</text>
+
+  <rect x="454" y="316" width="186" height="66" rx="8" fill="#f5f2e8" stroke="#d9d0b0" stroke-width="1.5"/>
+  <text x="547" y="338" text-anchor="middle" font-size="12" font-weight="600" fill="#6b5d2e">main.py</text>
+  <text x="547" y="354" text-anchor="middle" font-size="9" fill="#8a7a45">REST API routes</text>
+  <text x="547" y="368" text-anchor="middle" font-size="9" fill="#8a7a45">Swagger docs at /docs</text>
+
+  <line x1="340" y1="382" x2="340" y2="414" stroke="#a19f9d" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- SECTION: STORAGE + AUDIT -->
+  <text x="340" y="430" text-anchor="middle" font-size="10" letter-spacing="1.5" fill="#8a8886" font-weight="600">STORAGE &amp; AUDIT</text>
+  <rect x="130" y="440" width="200" height="58" rx="8" fill="#e2f2ea" stroke="#a8d5bf" stroke-width="1.5"/>
+  <text x="230" y="462" text-anchor="middle" font-size="12" font-weight="600" fill="#2c5f47">SQLite cache</text>
+  <text x="230" y="478" text-anchor="middle" font-size="9" fill="#4a8266">synced devices &#8226; employees</text>
+
+  <rect x="350" y="440" width="200" height="58" rx="8" fill="#e2f2ea" stroke="#a8d5bf" stroke-width="1.5"/>
+  <text x="450" y="462" text-anchor="middle" font-size="12" font-weight="600" fill="#2c5f47">Audit log</text>
+  <text x="450" y="478" text-anchor="middle" font-size="9" fill="#4a8266">every action &#8226; every outcome</text>
+
+  <line x1="450" y1="498" x2="450" y2="530" stroke="#a19f9d" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="340" y1="498" x2="340" y2="530" stroke="#a19f9d" stroke-width="1.5" marker-end="url(#arrow)" opacity="0"/>
+
+  <!-- SECTION: OUTBOUND -->
+  <text x="450" y="546" text-anchor="middle" font-size="10" letter-spacing="1.5" fill="#8a8886" font-weight="600">OUTBOUND (FEATURE-FLAGGED)</text>
+  <rect x="350" y="556" width="200" height="58" rx="8" fill="#fbe9e1" stroke="#e8b8a3" stroke-width="1.5"/>
+  <text x="450" y="578" text-anchor="middle" font-size="12" font-weight="600" fill="#8a4a2e">Monday.com board</text>
+  <text x="450" y="594" text-anchor="middle" font-size="9" fill="#b06a48">audit events mirrored via GraphQL</text>
+
+  <line x1="230" y1="498" x2="230" y2="644" stroke="#a19f9d" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- SECTION: DASHBOARD -->
+  <text x="340" y="660" text-anchor="middle" font-size="10" letter-spacing="1.5" fill="#8a8886" font-weight="600">DASHBOARD (VANILLA HTML/JS)</text>
+  <rect x="90" y="670" width="500" height="52" rx="8" fill="#e2f2ea" stroke="#a8d5bf" stroke-width="1.5"/>
+  <text x="340" y="691" text-anchor="middle" font-size="12" font-weight="600" fill="#2c5f47">Single-page operations dashboard</text>
+  <text x="340" y="707" text-anchor="middle" font-size="9" fill="#4a8266">cached reads &#8226; manual sync triggers &#8226; everything on screen is live tenant data</text>
+
+  <line x1="340" y1="722" x2="340" y2="754" stroke="#a19f9d" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- SECTION: VIEWS -->
+  <text x="340" y="770" text-anchor="middle" font-size="10" letter-spacing="1.5" fill="#8a8886" font-weight="600">DASHBOARD SECTIONS</text>
+
+  <rect x="40" y="782" width="140" height="52" rx="8" fill="#ffffff" stroke="#d2d0ce" stroke-width="1.5"/>
+  <text x="110" y="803" text-anchor="middle" font-size="11" font-weight="600" fill="#201f1e">Security Posture</text>
+  <text x="110" y="818" text-anchor="middle" font-size="9" fill="#8a8886">compliance rate</text>
+
+  <rect x="196" y="782" width="140" height="52" rx="8" fill="#ffffff" stroke="#d2d0ce" stroke-width="1.5"/>
+  <text x="266" y="803" text-anchor="middle" font-size="11" font-weight="600" fill="#201f1e">Devices</text>
+  <text x="266" y="818" text-anchor="middle" font-size="9" fill="#8a8886">live from Intune</text>
+
+  <rect x="352" y="782" width="140" height="52" rx="8" fill="#ffffff" stroke="#d2d0ce" stroke-width="1.5"/>
+  <text x="422" y="803" text-anchor="middle" font-size="11" font-weight="600" fill="#201f1e">IAM</text>
+  <text x="422" y="818" text-anchor="middle" font-size="9" fill="#8a8886">users &#8226; privileged roles</text>
+
+  <rect x="508" y="782" width="132" height="52" rx="8" fill="#ffffff" stroke="#d2d0ce" stroke-width="1.5"/>
+  <text x="574" y="803" text-anchor="middle" font-size="11" font-weight="600" fill="#201f1e">Lifecycle</text>
+  <text x="574" y="818" text-anchor="middle" font-size="9" fill="#8a8886">joiner / leaver</text>
+
+  <rect x="196" y="846" width="140" height="52" rx="8" fill="#ffffff" stroke="#d2d0ce" stroke-width="1.5"/>
+  <text x="266" y="867" text-anchor="middle" font-size="11" font-weight="600" fill="#201f1e">Audit Log</text>
+  <text x="266" y="882" text-anchor="middle" font-size="9" fill="#8a8886">full trail</text>
+
+  <rect x="352" y="846" width="140" height="52" rx="8" fill="#ffffff" stroke="#d2d0ce" stroke-width="1.5"/>
+  <text x="422" y="867" text-anchor="middle" font-size="11" font-weight="600" fill="#201f1e">Requests</text>
+  <text x="422" y="882" text-anchor="middle" font-size="9" fill="#8a8886">SharePoint intake</text>
+
+  <!-- Enrolled device note -->
+  <rect x="150" y="928" width="380" height="40" rx="8" fill="none" stroke="#c8c6c4" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <text x="340" y="946" text-anchor="middle" font-size="10" fill="#8a8886">Real enrolled device: Windows 11 Pro VM on Proxmox,</text>
+  <text x="340" y="960" text-anchor="middle" font-size="10" fill="#8a8886">Entra joined and Intune enrolled against this tenant</text>
+
+  <text x="340" y="996" text-anchor="middle" font-size="10" fill="#a19f9d">github.com/SlyCyberLab/DeviceIdentityOps</text>
+
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6" fill="none" stroke="#a19f9d" stroke-width="1.2"/>
+    </marker>
+  </defs>
+</svg>
